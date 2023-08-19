@@ -44,7 +44,9 @@ const RNNUSB = {
     return DeviceEventEmitter.addListener(CONSTANTS.EVENT_USB_RECV_DATA, fcn);
   },
 
-  subscribeUSBInform(fcn: (info: string) => void) {
+  subscribeUSBInform(fcn: (
+    info: CONSTANTS.MSG_PERMISSION_GRANTED | CONSTANTS.MSG_PERMISSION_DENIED | string
+  ) => void) {
     return DeviceEventEmitter.addListener(CONSTANTS.EVENT_USB_INFORM, fcn);
   },
 
