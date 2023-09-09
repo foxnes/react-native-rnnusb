@@ -29,7 +29,7 @@ public class RnnusbModule extends ReactContextBaseJavaModule {
     private static final String TAG = "ReactNative";
     private final ReactApplicationContext reactContext;
     private static final String ACTION_USB_PERMISSION = "com.rnnusb.USB_PERMISSION";
-    private static final int READ_INTERVAL = 50;
+    private static final int READ_INTERVAL = 5;
     private final Object locker = new Object();
     private UsbManager manager;
     private UsbDevice device;
@@ -68,8 +68,8 @@ public class RnnusbModule extends ReactContextBaseJavaModule {
             filterUSBAttach.addAction(UsbManager.ACTION_USB_DEVICE_ATTACHED);
             filterUSBAttach.addAction(UsbManager.ACTION_USB_DEVICE_DETACHED);
             this.reactContext.registerReceiver(usbAttachReceiver, filterUSBAttach);
-        } catch(Exception e) {
-            Log.w(TAG, "err: "+e.getMessage());
+        } catch (Exception e) {
+            Log.w(TAG, "err: " + e.getMessage());
         }
     }
 
@@ -120,7 +120,7 @@ public class RnnusbModule extends ReactContextBaseJavaModule {
                 readThread.start();
             }
             emit(EVENT_USB_CONNECTION, MSG_USB_CONNECTION_ATTACHED);
-        } catch(Exception e) {
+        } catch (Exception e) {
             Log.i(TAG, "useDevice err: " + e.getMessage());
             emit(EVENT_USB_INFORM, e.getMessage());
         }
@@ -138,8 +138,8 @@ public class RnnusbModule extends ReactContextBaseJavaModule {
                 synchronized (this) {
                     UsbDevice device = (UsbDevice) intent.getParcelableExtra(UsbManager.EXTRA_DEVICE);
                     if (intent.getBooleanExtra(UsbManager.EXTRA_PERMISSION_GRANTED, false)) {
-                        if(device != null){
-                            //call method to set up device communication
+                        if (device != null) {
+                            // call method to set up device communication
                             Log.i(TAG, "permission granted for device");
                             useDevice();
                             emit(EVENT_USB_INFORM, MSG_PERMISSION_GRANTED);
@@ -157,7 +157,8 @@ public class RnnusbModule extends ReactContextBaseJavaModule {
         public void onReceive(Context context, Intent intent) {
             String action = intent.getAction();
 
-            // UsbDevice usbDevice = (UsbDevice) intent.getParcelableExtra(UsbManager.EXTRA_DEVICE);
+            // UsbDevice usbDevice = (UsbDevice)
+            // intent.getParcelableExtra(UsbManager.EXTRA_DEVICE);
             UsbDevice usbDevice = (UsbDevice) intent.getExtras().get("device");
             Log.i(TAG, "usbAttachReceiver: usb dev " + usbDevice.toString());
             if (usbDevice == null || usbDevice.getProductId() != PID || usbDevice.getVendorId() != VID) {
@@ -205,7 +206,7 @@ public class RnnusbModule extends ReactContextBaseJavaModule {
         int len = hex.length();
         byte[] data = new byte[len / 2];
         for (int i = 0, j = 0; i < len; i += 2, j++) {
-            data[j] = (byte)((Character.digit(hex.charAt(i), 16) << 4)
+            data[j] = (byte) ((Character.digit(hex.charAt(i), 16) << 4)
                     + Character.digit(hex.charAt(i + 1), 16));
         }
         return data;
@@ -219,14 +220,14 @@ public class RnnusbModule extends ReactContextBaseJavaModule {
                 if (connection == null) {
                     continue;
                 }
-                synchronized (locker) {
+                // synchronized (locker) { // you dont need a lock while reading
                     byte[] bytes = new byte[readBufferMaxLength];
                     int response = connection.bulkTransfer(endpointIn, bytes, readBufferMaxLength, 50);
                     if (response >= 0) {
                         String hex = bytesToHexString(bytes, 0, readBufferMaxLength);
                         emit(EVENT_USB_RECV_DATA, hex);
                     }
-                }
+                // }
             }
         }
     };
@@ -276,5 +277,10 @@ public class RnnusbModule extends ReactContextBaseJavaModule {
             connection.bulkTransfer(endpointOut, bytes, bytes.length, 50);
         }
         promise.resolve(null);
+    }
+
+    @ReactMethod
+    public void echo(String str) {
+        Log.i(TAG, "echo: " + str);
     }
 }
