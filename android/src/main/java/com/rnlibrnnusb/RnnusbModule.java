@@ -29,7 +29,8 @@ public class RnnusbModule extends ReactContextBaseJavaModule {
     private static final String TAG = "ReactNative";
     private final ReactApplicationContext reactContext;
     private static final String ACTION_USB_PERMISSION = "com.rnlibrnnusb.USB_PERMISSION";
-    private static final int READ_INTERVAL = 5;
+    private static final int THREAD_STOP_INTERVAL = 100;
+    private static boolean stopReadingThread = true;
     private final Object locker = new Object();
     private UsbManager manager;
     private UsbDevice device;
@@ -116,6 +117,7 @@ public class RnnusbModule extends ReactContextBaseJavaModule {
             Log.i(TAG, "useDevice: connection opened!");
             if (readThread == null) {
                 Log.i(TAG, "useDevice: start reader thread");
+                stopReadingThread = false;
                 readThread = new Thread(reader);
                 readThread.start();
             }
@@ -176,11 +178,13 @@ public class RnnusbModule extends ReactContextBaseJavaModule {
                         if (connection != null) {
                             connection.close();
                         }
-                        connection = null;
-                        readThread = null;
-                        endpointOut = null;
-                        endpointIn = null;
-                        device = null;
+                        stopReadingThread = true;
+                        // 置空之后 另一个线程有一定概率会爆空指针 所以不要置空
+//                        connection = null;
+//                        readThread = null;
+//                        endpointOut = null;
+//                        endpointIn = null;
+//                        device = null;
                     }
                     emit(EVENT_USB_CONNECTION, MSG_USB_CONNECTION_DETACHED);
                 }
@@ -217,15 +221,17 @@ public class RnnusbModule extends ReactContextBaseJavaModule {
         public void run() {
             int readBufferMaxLength = endpointIn.getMaxPacketSize();
             byte[] bytes = new byte[readBufferMaxLength];
-            while (connection != null) {
-                // synchronized (locker) { // you don't need a lock while reading
-                int response = connection.bulkTransfer(endpointIn, bytes, readBufferMaxLength, 1000);
+            while (true) {
+                if (stopReadingThread) {
+                    sleep(THREAD_STOP_INTERVAL);
+                    continue;
+                }
+                int response = connection.bulkTransfer(endpointIn, bytes, readBufferMaxLength, 50);
                 if (response >= 0) {
                     String hex = bytesToHexString(bytes, 0, readBufferMaxLength);
-//                    Log.i(TAG, "USB recv: " + hex);
+                    // Log.i(TAG, "USB read: " + hex);
                     emit(EVENT_USB_RECV_DATA, hex);
                 }
-                // }
             }
         }
     };
