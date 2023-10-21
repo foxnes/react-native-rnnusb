@@ -1,6 +1,6 @@
 // RnnusbModule.java
 
-package com.reactlibrary;
+package com.rnlibrnnusb;
 
 import com.facebook.react.bridge.ReactApplicationContext;
 import com.facebook.react.bridge.ReactContextBaseJavaModule;
@@ -28,7 +28,7 @@ import java.util.Iterator;
 public class RnnusbModule extends ReactContextBaseJavaModule {
     private static final String TAG = "ReactNative";
     private final ReactApplicationContext reactContext;
-    private static final String ACTION_USB_PERMISSION = "com.rnnusb.USB_PERMISSION";
+    private static final String ACTION_USB_PERMISSION = "com.rnlibrnnusb.USB_PERMISSION";
     private static final int READ_INTERVAL = 5;
     private final Object locker = new Object();
     private UsbManager manager;
@@ -177,6 +177,7 @@ public class RnnusbModule extends ReactContextBaseJavaModule {
                             connection.close();
                         }
                         connection = null;
+                        readThread = null;
                         endpointOut = null;
                         endpointIn = null;
                         device = null;
@@ -215,18 +216,15 @@ public class RnnusbModule extends ReactContextBaseJavaModule {
     private final Runnable reader = new Runnable() {
         public void run() {
             int readBufferMaxLength = endpointIn.getMaxPacketSize();
-            while (true) {
-                sleep(READ_INTERVAL);
-                if (connection == null) {
-                    continue;
+            byte[] bytes = new byte[readBufferMaxLength];
+            while (connection != null) {
+                // synchronized (locker) { // you don't need a lock while reading
+                int response = connection.bulkTransfer(endpointIn, bytes, readBufferMaxLength, 1000);
+                if (response >= 0) {
+                    String hex = bytesToHexString(bytes, 0, readBufferMaxLength);
+//                    Log.i(TAG, "USB recv: " + hex);
+                    emit(EVENT_USB_RECV_DATA, hex);
                 }
-                // synchronized (locker) { // you dont need a lock while reading
-                    byte[] bytes = new byte[readBufferMaxLength];
-                    int response = connection.bulkTransfer(endpointIn, bytes, readBufferMaxLength, 50);
-                    if (response >= 0) {
-                        String hex = bytesToHexString(bytes, 0, readBufferMaxLength);
-                        emit(EVENT_USB_RECV_DATA, hex);
-                    }
                 // }
             }
         }
