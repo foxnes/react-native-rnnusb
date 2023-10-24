@@ -117,10 +117,10 @@ public class RnnusbModule extends ReactContextBaseJavaModule {
             Log.i(TAG, "useDevice: connection opened!");
             if (readThread == null) {
                 Log.i(TAG, "useDevice: start reader thread");
-                stopReadingThread = false;
                 readThread = new Thread(reader);
                 readThread.start();
             }
+            stopReadingThread = false;
             emit(EVENT_USB_CONNECTION, MSG_USB_CONNECTION_ATTACHED);
         } catch (Exception e) {
             Log.i(TAG, "useDevice err: " + e.getMessage());
@@ -180,11 +180,11 @@ public class RnnusbModule extends ReactContextBaseJavaModule {
                         }
                         stopReadingThread = true;
                         // 置空之后 另一个线程有一定概率会爆空指针 所以不要置空
-//                        connection = null;
-//                        readThread = null;
-//                        endpointOut = null;
-//                        endpointIn = null;
-//                        device = null;
+                        // connection = null;
+                        // readThread = null;
+                        // endpointOut = null;
+                        // endpointIn = null;
+                        // device = null;
                     }
                     emit(EVENT_USB_CONNECTION, MSG_USB_CONNECTION_DETACHED);
                 }
